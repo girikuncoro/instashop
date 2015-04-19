@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<body>
+<div id="vis"></div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="lib/d3.layout.cloud.js"></script>
+<script>
+  var w = 1200,
+      h = 800;
+  
+  var svg = d3.select("#vis").append("svg")
+    .attr("width", w)
+    .attr("height", h);
+
+  var background = svg.append("g"),
+    vis = svg.append("g")
+    .attr("transform", "translate(" + [w >> 1, h >> 1] + ")");
+
+  var fill = d3.scale.category20();
+
+  d3.csv("../data/hashtags.csv", function(error, rows){
+      console.log(rows);
+      process(rows);
+  });
+
+  function process(data) {
+    d3.layout.cloud().size([w, h])
+      .words(data)
+      .padding(10)
+      .rotate(function() { return ~~(Math.random() * 2) * 90; })
+      .font("Impact")
+      .fontSize(function(d) { return 13 + d.size / 180000; })
+      .on("end", draw)
+      .start();
+  }
+
+  function draw(data, bounds) {
+    scale = bounds ? Math.min(
+        w / Math.abs(bounds[1].x - w / 2),
+        w / Math.abs(bounds[0].x - w / 2),
+        h / Math.abs(bounds[1].y - h / 2),
+        h / Math.abs(bounds[0].y - h / 2)) / 2 : 1;
+    words = data;
+    var text = vis.selectAll("text")
+        .data(words, function(d) { return d.text.toLowerCase(); });
+    text.transition()
+        .duration(1000)
+        .attr("transform", function(d) { return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")"; })
+        .style("font-size", function(d) { return d.size + "px"; });
+    text.enter().append("text")
+        .attr("text-anchor", "middle")
+        .attr("transform", function(d) { return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")"; })
+        .style("font-size", "1px")
+      .transition()
+        .duration(1000)
+        .style("font-size", function(d) { return d.size + "px"; });
+    text.style("font-family", function(d) { return d.font; })
+        .style("fill", function(d) { return fill(d.text.toLowerCase()); })
+        .text(function(d) { return '#' + d.text; });
+    var exitGroup = background.append("g")
+        .attr("transform", vis.attr("transform"));
+    var exitGroupNode = exitGroup.node();
+    text.exit().each(function() {
+      exitGroupNode.appendChild(this);
+    });
+  }
+</script>
